@@ -1,82 +1,117 @@
 <img width="440" height="980" alt="Screenshot_20260516_173900" src="https://github.com/user-attachments/assets/5a1a171b-8c27-4507-8647-0ad99bc810d1" />
 <img width="443" height="988" alt="Screenshot_20260516_173921" src="https://github.com/user-attachments/assets/db597b9a-328a-483f-8e55-ed95146cf183" />
 
-# BluetoothJammer 📱
+# BluetoothJammer (Refactored UI / Core Improvements)
 
-> A simple Bluetooth jammer/DoS tool for Android. Built with Kotlin.
-> 
-> ⚠️ **WIP - Work in Progress**
+A heavily refactored version of the original Bluetooth testing project, focused on **UI modernization, architecture cleanup, and stability improvements**.
 
-## 📋 Overview
+This fork introduces a full UI rewrite using Jetpack Compose, improved lifecycle management, and more reliable Bluetooth scanning and session handling.
 
-BluetoothJammer is an Android application designed to test Bluetooth device vulnerabilities through interference and denial-of-service (DoS) attacks. This educational tool helps understand Bluetooth security mechanisms.
+---
 
-**Disclaimer:** Use only on devices you own or have explicit permission to test. Unauthorized access to computer systems is illegal.
+## ✨ Key Improvements
 
-## ✨ Features
+### 🎨 UI / UX Overhaul
+- Migrated from XML layouts to **Jetpack Compose**
+- Custom cyberpunk-inspired theme (neon cyan/magenta)
+- New reusable components:
+  - `CyberButton` (neon styled buttons)
+  - `GlitchText` (animated glitch effect titles)
+  - `CyberCard` (glass/neon containers)
+- Improved layout responsiveness and visual consistency
 
-- 🎨 Material UI Design
-- 🔄 Multi-threaded Attack Engine
-- 🔀 Auto UUID Randomization
-- 📊 Real-time Activity Logging
-- ⚡ Optimized Attack Threads
-- 🎛️ Configurable Attack Options
+### ⚙️ Core Architecture Fixes
+- Introduced centralized `AttackManager`
+- Proper lifecycle handling for background threads
+- Guaranteed cleanup on stop / app close
+- Reduced risk of orphaned background processes
 
-## 🖼️ Preview
+### 📡 Bluetooth System Improvements
+- Rewritten device discovery system
+- Real-time scanning updates without UI blocking
+- Better handling of paired + nearby devices
 
-<table style="padding:10px">
-  <tr>
-    <td>
-        <img src="./assets/attack.png" alt="Attack Interface">
-    </td>
-  </tr>
-</table>
+### 📊 Logging & Debugging
+- Real-time log console stream
+- Structured log categories:
+  - Thread lifecycle events
+  - Connection state updates
+  - Data transmission tracking
+  - Retry and cleanup events
 
-## 🚀 Getting Started
+### 🎚️ New Features
+- Adjustable intensity slider (concurrency control)
+- Live session monitoring
+- Updated app icon and branding assets
 
-### Prerequisites
-- Android SDK 24+
-- Kotlin 1.x
-- Gradle
+---
 
-### Installation
+## 🧪 Purpose
 
-1. Clone the repository:
+This project is intended for:
+- Bluetooth system testing
+- Android concurrency and lifecycle experimentation
+- UI/UX modernization experiments with Jetpack Compose
+- Debugging and stress-testing device connectivity behavior
+
+⚠️ This project is not intended for real-world interference or malicious use.
+
+---
+
+## 🛠️ Tech Stack
+
+- Kotlin
+- Android SDK
+- Jetpack Compose
+- Coroutines / Threads
+- Bluetooth APIs (Android)
+
+---
+
+## 🚀 Build & Run
+
+1. Clone the repository
 ```bash
 git clone https://github.com/PIXELQUADRO07/BluetoothJammer.git
-cd BluetoothJammer
 ```
 
-2. Build the project:
-```bash
-gradle build
-```
+2. Open in Android Studio
 
-3. Install on device:
-```bash
-gradle installDebug
-```
+3. Sync Gradle
 
-## 📝 TODO
+4. Run on a physical Android device (recommended for Bluetooth features)
 
-### Completed ✅
-- [x] Material UI
-- [x] Thread Option
-- [x] Log Switch
-- [x] Auto randomize UUID
-- [x] Optimize Attack Thread
+## 📱 Requirements
 
-### In Progress / Bugs 🐛
-- [ ] Devices List (bug)
-- [ ] Start/Stop button (known issue: thread not properly killed on stop, requires app restart)
+- Android 8.0+
+- Bluetooth permissions enabled
+- Physical device recommended (emulators have limited Bluetooth support)
 
-## 🤝 Special Thanks
+---
 
-- ChatGPT-4o for development assistance
+## 🤝 Contribution
+
+Contributions are welcome!
+
+If you'd like to contribute:
+
+- Open an issue describing the improvement or bug
+- Or submit a pull request with a clear description of changes
+
+---
 
 ## 📄 License
 
-This project is provided as-is for educational purposes only.
+Inherits the original project license (if applicable).
+Please refer to the original repository for licensing terms.
+
+---
+
+## ⚠️ Disclaimer
+
+This project is provided for educational and research purposes only.
+
+The authors are not responsible for any misuse of this software.
 
 ---
 
