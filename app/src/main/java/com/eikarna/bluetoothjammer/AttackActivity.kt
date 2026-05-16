@@ -1,137 +1,171 @@
 package com.eikarna.bluetoothjammer
 
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
-import android.graphics.text.LineBreaker
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
-import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.text.isDigitsOnly
-import androidx.core.widget.doAfterTextChanged
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import api.L2capFloodAttack
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.textview.MaterialTextView
-import com.google.android.material.textfield.TextInputEditText
-import java.util.Date
-import util.Logger
-import kotlin.math.log
+import com.eikarna.bluetoothjammer.api.AttackManager
+import com.eikarna.bluetoothjammer.ui.components.CyberButton
+import com.eikarna.bluetoothjammer.ui.components.CyberCard
+import com.eikarna.bluetoothjammer.ui.components.GlitchText
+import com.eikarna.bluetoothjammer.ui.theme.CyberError
+import com.eikarna.bluetoothjammer.ui.theme.CyberNeonGreen
+import com.eikarna.bluetoothjammer.ui.theme.CyberPrimary
+import com.eikarna.bluetoothjammer.ui.theme.CyberpunkTheme
+import com.eikarna.bluetoothjammer.ui.theme.CyberSecondary
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import kotlinx.coroutines.launch
 
-class AttackActivity : AppCompatActivity() {
+class AttackActivity : ComponentActivity() {
 
-    // Initialize UI elements
-    private lateinit var viewDeviceName: MaterialTextView
-    private lateinit var viewDeviceAddress: MaterialTextView
-    private lateinit var viewThreads: TextInputEditText
-    private lateinit var buttonStartStop: MaterialButton
-    private lateinit var logAttack: MaterialTextView
-    private lateinit var switchLog: MaterialSwitch
-
-    // Initialize detail info
-    private lateinit var deviceName: String
-    private lateinit var address: String
-    private var threads: Int = 1
-
-    companion object {
-        @JvmStatic
-        var isAttacking = false
-        var FrameworkVersion = 1.0
-        var loggingStatus = true
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d("AttackActivity", "onCreate called")
-        println("AttackActivity onCreate called")
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.attack_layout)
 
-        // Get data from Intent
-        deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Unknown Device"
-        address = intent.getStringExtra("ADDRESS") ?: "Unknown Address"
-        threads = intent.getIntExtra("THREADS", 1)
+        val deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Unknown"
+        val address = intent.getStringExtra("ADDRESS") ?: "Unknown"
 
-        // Get Element ID
-        viewDeviceName = findViewById(R.id.textViewDeviceName)
-        viewDeviceAddress = findViewById(R.id.textViewAddress)
-        viewThreads = findViewById(R.id.editTextThreads)
-        buttonStartStop = findViewById(R.id.buttonStartStop)
-        logAttack = findViewById(R.id.logTextView)
-        switchLog = findViewById(R.id.switchLogView)
-
-        // Set text views
-        viewDeviceName.text = "Device Name: $deviceName"
-        viewDeviceAddress.text = "Address: $address"
-        viewThreads.setText("$threads")
-        logAttack.justificationMode = LineBreaker.JUSTIFICATION_MODE_INTER_WORD
-        Logger.appendLog(logAttack, "Bluetooth Jammer Framework Version: $FrameworkVersion")
-
-
-
-        // Set button listener
-        buttonStartStop.setOnClickListener {
-            if (isAttacking) {
-                stopAttack()
-            } else {
-                startAttack()
+        setContent {
+            CyberpunkTheme {
+                AttackScreen(
+                    deviceName = deviceName,
+                    address = address,
+                    onBack = { finish() }
+                )
             }
         }
-
-        // Threading Input listener
-        viewThreads.doAfterTextChanged { str ->
-            if (str != null) {
-                if (str.toString() != "" && str.isDigitsOnly()) {
-                    threads = str.toString().toInt()
-                }
-            }
-        }
-
-        // Logging Switch listener
-        switchLog.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                loggingStatus = true
-                Toast.makeText(this@AttackActivity, "Logging Enabled! You may degrade performance issue.", Toast.LENGTH_LONG).show()
-            } else {
-                loggingStatus = false
-                Toast.makeText(this@AttackActivity, "Logging Disabled!", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    @SuppressLint("MissingPermission")
-    private fun startAttack() {
-        isAttacking = true
-        buttonStartStop.text = "Stop"
-        BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
-        Logger.appendLog(logAttack, "Attack Started! Address: $address ($deviceName) | Threads: $threads")
-        Toast.makeText(this@AttackActivity, "PLEASE FORCE CLOSE APP IF YOU WANT STOP THE ATTACK!", Toast.LENGTH_LONG).show()
-        for (i in 1..threads) L2capFloodAttack(address).startAttack(this, logAttack)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun stopAttack() {
-        isAttacking = false
-        buttonStartStop.text = "Start"
-        Logger.appendLog(logAttack, "Attack Stopped! Force close this app..")
-        BluetoothAdapter.getDefaultAdapter().startDiscovery()
-        L2capFloodAttack(address).stopAttack()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (isAttacking) {
-            stopAttack() // Ensure the attack stops if the activity is destroyed
+        AttackManager.stopAllAttacks()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AttackScreen(
+    deviceName: String,
+    address: String,
+    onBack: () -> Unit
+) {
+    var threads by remember { mutableStateOf(8f) }
+    var isAttacking by remember { mutableStateOf(false) }
+    val logs = remember { mutableStateListOf<String>() }
+    val listState = rememberLazyListState()
+    val context = LocalContext.current
+
+    LaunchedEffect(logs.size) {
+        if (logs.isNotEmpty()) {
+            listState.animateScrollToItem(logs.size - 1)
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        if (isAttacking) {
-            stopAttack()
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { GlitchText("ATTACK PROTOCOL", color = CyberError) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
+                ),
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text("< BACK", color = CyberPrimary)
+                    }
+                }
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            CyberCard(
+                modifier = Modifier.fillMaxWidth(),
+                borderColor = CyberPrimary
+            ) {
+                Text("TARGET ACQUIRED", color = CyberPrimary.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(deviceName, color = CyberPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(address, color = CyberPrimary.copy(alpha = 0.5f), fontSize = 14.sp)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            CyberCard(
+                modifier = Modifier.fillMaxWidth(),
+                borderColor = CyberPrimary
+            ) {
+                Text("ATTACK INTENSITY: ${threads.toInt()}", color = CyberPrimary, fontWeight = FontWeight.Bold)
+                Slider(
+                    value = threads,
+                    onValueChange = { if (!isAttacking) threads = it },
+                    valueRange = 1f..32f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = CyberPrimary,
+                        activeTrackColor = CyberPrimary,
+                        inactiveTrackColor = CyberPrimary.copy(alpha = 0.2f)
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            CyberButton(
+                text = if (isAttacking) "TERMINATE ATTACK" else "INITIALIZE ATTACK",
+                onClick = {
+                    if (isAttacking) {
+                        AttackManager.stopAllAttacks()
+                        isAttacking = false
+                        logs.add("[SYSTEM] Attack terminated.")
+                    } else {
+                        isAttacking = true
+                        logs.add("[SYSTEM] Initializing flood attack on $address...")
+                        AttackManager.startAttack(address, threads.toInt()) {
+                            L2capFloodAttack(address).performAttack(context) { message ->
+                                logs.add(message)
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                color = CyberPrimary
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text("LOG_STREAM", color = CyberPrimary, fontWeight = FontWeight.Bold)
+            CyberCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                borderColor = CyberPrimary
+            ) {
+                LazyColumn(state = listState) {
+                    items(logs) { log ->
+                        Text(
+                            text = log,
+                            color = if (log.contains("[SYSTEM]")) CyberPrimary.copy(alpha = 0.7f) else CyberPrimary,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

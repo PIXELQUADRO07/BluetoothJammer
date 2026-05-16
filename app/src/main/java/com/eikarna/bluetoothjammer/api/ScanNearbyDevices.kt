@@ -4,86 +4,82 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.content.BroadcastReceiver
 import android.content.Context
-import android.os.Handler
-import android.util.Log
-import androidx.core.content.ContextCompat.getSystemService
+import android.content.Intent
+import android.content.IntentFilter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class ScanNearbyDevices {
 
     private var isScanning = false
-    private var handler: Handler = Handler()
-    private lateinit var runnable: Runnable
+    private val _discoveredDevices = MutableStateFlow<Set<BluetoothDeviceInfo>>(emptySet())
+    val discoveredDevices = _discoveredDevices.asStateFlow()
+
+    private val receiver = object : BroadcastReceiver() {
+        @SuppressLint("MissingPermission")
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                BluetoothDevice.ACTION_FOUND -> {
+                    val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    device?.let {
+                        val info = BluetoothDeviceInfo(it.name ?: "Unknown Device", it.address)
+                        _discoveredDevices.value = _discoveredDevices.value + info
+                    }
+                }
+            }
+        }
+    }
 
     companion object {
         private var instance: ScanNearbyDevices? = null
-
-        // Singleton pattern to ensure only one instance exists
         fun getInstance(): ScanNearbyDevices {
             if (instance == null) {
                 instance = ScanNearbyDevices()
             }
             return instance!!
         }
-
-        val devicesList = mutableListOf<BluetoothDeviceInfo>()
+        val devicesList = mutableListOf<BluetoothDeviceInfo>() // Keep for compatibility if needed
     }
 
-    // Function to start scanning for nearby Bluetooth devices
-    fun startScanning(context: Context, callback: (List<BluetoothDeviceInfo>) -> Unit) {
-        val bluetoothManager: BluetoothManager? =
-            getSystemService(context, BluetoothManager::class.java)
-        val bluetoothAdapter: BluetoothAdapter? = bluetoothManager?.adapter
+    @SuppressLint("MissingPermission")
+    fun startScanning(context: Context) {
+        if (isScanning) return
+        isScanning = true
+        
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val adapter = bluetoothManager.adapter
+        
+        // Add paired devices first
+        adapter.bondedDevices.forEach { device ->
+            val info = BluetoothDeviceInfo(device.name ?: "Unknown Device", device.address)
+            _discoveredDevices.value = _discoveredDevices.value + info
+        }
 
-        if (bluetoothAdapter?.isEnabled == true && !isScanning) {
-            isScanning = true
+        val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
+        context.registerReceiver(receiver, filter)
+        adapter.startDiscovery()
+    }
 
-            // Create a runnable to scan every second
-            runnable = object : Runnable {
-                @SuppressLint("MissingPermission")
-                override fun run() {
-                    Log.d("ScanNearbyDevices", "Scanning for nearby devices...")
-                    println("Scanning nearby devices...")
-                    devicesList.clear() // Clear previous results
-
-                    val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter.bondedDevices
-                    pairedDevices?.forEach { device ->
-                        device.fetchUuidsWithSdp()
-                        val deviceInfo = BluetoothDeviceInfo(
-                            name = device.name ?: "Unknown Device",
-                            address = device.address
-                        )
-                        devicesList.add(deviceInfo)
-                    }
-
-                    // Return the list of devices to the callback function
-                    callback(devicesList)
-
-                    // Schedule the next scan after 1 second
-                    handler.postDelayed(this, 1000)
-                }
-            }
-
-            // Start the periodic scanning
-            handler.post(runnable)
-        } else {
-            Log.e("ScanNearbyDevices", "Bluetooth is disabled or already scanning.")
+    @SuppressLint("MissingPermission")
+    fun stopScanning(context: Context) {
+        if (!isScanning) return
+        isScanning = false
+        
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val adapter = bluetoothManager.adapter
+        adapter.cancelDiscovery()
+        
+        try {
+            context.unregisterReceiver(receiver)
+        } catch (e: Exception) {
+            // Already unregistered
         }
     }
 
-    // Function to stop scanning
-    fun stopScanning() {
-        if (isScanning) {
-            isScanning = false
-            handler.removeCallbacks(runnable) // Stop the periodic scanning
-        }
-    }
-
-    fun resumeScanning() {
-        if (!isScanning) {
-            isScanning = true
-            handler.post(runnable)
-        }
+    fun clearDevices() {
+        _discoveredDevices.value = emptySet()
     }
 }
 
